@@ -1,9 +1,10 @@
 import copy,time
 import multiprocessing as mp
+import random
 
-#words = ["isle","barra","jura","mull","harris","benbecula","north","uist","south","uist","cullins","islay","eigg","lewis","muck","caledonian","macbrayne","iona","staffa","coll","tiree","canna","south","uist","colonsay","scalpay","raasay","rona"]
+words = ["isle","barra","jura","mull","harris","benbecula","north","uist","south","uist","cullins","islay","eigg","lewis","muck","caledonian","macbrayne","iona","staffa","coll","tiree","canna","south","uist","colonsay","scalpay","raasay","rona"]
 
-words = ["isle","barra","jura","mull","harris","benbecula","north","uist","south","uist","cullins"]
+#words = ["isle","barra","jura","mull","harris","benbecula","north","uist","south","uist","cullins"]
 
 #words = {"LIGHTMEAL","UNRAVEL","CREW","COERCED","CLOUDCUC","AGGRIEVE","STOVE","REPLACED"}
 #words = {"LIGHTMEAL","UNRAVEL","CREW","COERCED","CLOUDCUC","AGGRIEVE"}
@@ -18,8 +19,8 @@ def fitfunc(puzzle,words,quality,level,checksum):
 	#Try all remaining words
 	for w,word in enumerate(words):
 		fitmask = [False]*len(word)
-		if level < 2:
-			print("{}Placing word {} at level {} with checksum {}".format(' '*level,w,level,checksum))
+		if level < 17:
+			print("{}Placing word {} at level {} with checksum {} at {}".format(' '*level,w,level,checksum,time.strftime("%a, %d %b %Y %H:%M:%S")))
 		#Try every letter of word
 		for i,letteri in enumerate(word):
 			#Try fitting at every existing place
@@ -62,29 +63,33 @@ def fitfunc(puzzle,words,quality,level,checksum):
 					#Did the word fit and was it a new solution?
 					if wordOK and newchecksum not in csumcache[level]:
 						if len(csumcache[level]) > maxcache:
-							print("Cleared checksum cache at level {}".format(level))
-							csumcache[level] = set()
+							csumcache[level] = {newchecksum}
 						else:
 							csumcache[level].add(newchecksum)
 						#Copy the puzzle
 						newpuzzle = copy.copy(puzzle)
-						newquality = quality
+						newquality = list(quality)
 						#Add the word
 						for j,letterj in enumerate(word):
 							newloc = (loc[0],loc[1]-i+j)
 							if newloc in newpuzzle:
-								newquality += 1
+								newquality[0] += 1
 								newpuzzle[newloc] = (letterj,True,True)
 							else:
 								newpuzzle[newloc] = (letterj,False,True)
+						#Update vertical dimensions
+						newquality[4] = min(newquality[4],loc[1]-i)
+						newquality[5] = max(newquality[5],loc[1]-i+len(word)-1)
+						newquality[1] = newquality[2]-newquality[3]+newquality[4]-newquality[5]
+						newquality = tuple(newquality)
 						#Copy the words
 						newwords = copy.copy(words)
 						newwords.remove(word)
 						#Recurse!
 						if len(newwords):
 							fitfunc(newpuzzle,newwords,newquality,level+1,newchecksum)
-						elif newquality >= bestquality:
-							print("Solution with quality {}".format(newquality))
+						elif newquality > bestquality:
+							print("Solution with quality {} at {}".format(newquality,time.strftime("%a, %d %b %Y %H:%M:%S")))
 							bestquality = newquality
 							printpuzzle(newpuzzle)
 							
@@ -120,29 +125,33 @@ def fitfunc(puzzle,words,quality,level,checksum):
 					#Did the word fit and was it a new solution?
 					if wordOK and newchecksum not in csumcache[level]:
 						if len(csumcache[level]) > maxcache:
-							print("Cleared checksum cache at level {}".format(level))
-							csumcache[level] = set()
+							csumcache[level] = {newchecksum}
 						else:
 							csumcache[level].add(newchecksum)
 						#Copy the puzzle
 						newpuzzle = copy.copy(puzzle)
-						newquality = quality
+						newquality = list(quality)
 						#Add the word
 						for j,letterj in enumerate(word):
 							newloc = (loc[0]-i+j,loc[1])
 							if newloc in newpuzzle:
-								newquality += 1
+								newquality[0] += 1
 								newpuzzle[newloc] = (letterj,True,True)
 							else:
 								newpuzzle[newloc] = (letterj,True,False)
+						#Update horizontal dimensions
+						newquality[2] = min(newquality[2],loc[0]-i)
+						newquality[3] = max(newquality[3],loc[0]-i+len(word)-1)
+						newquality[1] = newquality[2]-newquality[3]+newquality[4]-newquality[5]
+						newquality = tuple(newquality)
 						#Copy the words
 						newwords = copy.copy(words)
 						newwords.remove(word)
 						#Recurse!
 						if len(newwords):
 							fitfunc(newpuzzle,newwords,newquality,level+1,newchecksum)
-						elif newquality >= bestquality:
-							print("Solution with quality {}".format(newquality))
+						elif newquality > bestquality:
+							print("Solution with quality {} at {}".format(newquality,time.strftime("%a, %d %b %Y %H:%M:%S")))
 							bestquality = newquality
 							printpuzzle(newpuzzle)
 							
@@ -156,16 +165,18 @@ def printpuzzle(puzzle):
 		print(''.join([puzzle[(j,i)][0] if (j,i) in puzzle else ' ' for j in range(minx,maxx)]))
 	print('')
 	
-bestquality = 0
 csumcache = [set()]*len(words)
+
+random.shuffle(words)
 	
 #Place first word
 starttime = time.time()
 word = words.pop()
+bestquality = (0,-(len(word)-1),0,len(word)-1,0,0)
 for i,letter in enumerate(word):
 	puzzle[(i,0)] = (letter,True,False)
 if len(words):
-	fitfunc(puzzle,words,0,0,0)
+	fitfunc(puzzle,words,bestquality,0,0)
 else:
 	printpuzzle(puzzle)
 print(time.time()-starttime)
